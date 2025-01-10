@@ -4,47 +4,51 @@ function App() {
   const [goals, setGoals] = useState([]);
   const [quote, setQuote] = useState(null);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [newGoal, setNewGoal] = useState({ title: '', description: '' });
 
   useEffect(() => {
-    // Log the API URL we're trying to reach
-    console.log('API URL:', process.env.REACT_APP_API_URL);
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      // Log the API URL we're using
+      console.log('Attempting to fetch from:', process.env.REACT_APP_API_URL);
 
-    // Fetch quotes with error handling
-    const fetchQuote = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/quotes/random`);
-        console.log('Quote response status:', response.status);
+        // Fetch quote
+        const quoteResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/quotes/random`);
+        console.log('Quote response status:', quoteResponse.status);
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (!quoteResponse.ok) {
+          throw new Error(`Quote fetch failed with status: ${quoteResponse.status}`);
         }
+
+        const quoteData = await quoteResponse.json();
+        console.log('Quote data received:', quoteData);
+        setQuote(quoteData);
+
+        // Fetch goals
+        const goalsResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/goals`);
+        console.log('Goals response status:', goalsResponse.status);
         
-        const data = await response.json();
-        console.log('Quote data received:', data);
-        setQuote(data);
-      } catch (error) {
-        console.error('Error fetching quote:', error);
-        setError(error.message);
+        if (!goalsResponse.ok) {
+          throw new Error(`Goals fetch failed with status: ${goalsResponse.status}`);
+        }
+
+        const goalsData = await goalsResponse.json();
+        console.log('Goals data received:', goalsData);
+        setGoals(goalsData);
+
+      } catch (err) {
+        console.error('Fetch error:', err);
+        setError(err.message || 'Failed to fetch data');
+      } finally {
+        setLoading(false);
       }
     };
 
-    // Fetch goals with error handling
-    const fetchGoals = async () => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/goals`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setGoals(data);
-      } catch (error) {
-        console.error('Error fetching goals:', error);
-      }
-    };
-
-    fetchQuote();
-    fetchGoals();
+    fetchData();
   }, []);
 
   const addGoal = async (e) => {
@@ -55,13 +59,22 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newGoal),
       });
+      
+      if (!res.ok) {
+        throw new Error(`Failed to add goal. Status: ${res.status}`);
+      }
+
       const goal = await res.json();
       setGoals([goal, ...goals]);
       setNewGoal({ title: '', description: '' });
-    } catch (error) {
-      console.error('Error adding goal:', error);
+    } catch (err) {
+      console.error('Error adding goal:', err);
+      alert('Failed to add goal: ' + err.message);
     }
   };
+
+  // Debug section to show environment variable
+  console.log('Current API URL:', process.env.REACT_APP_API_URL);
 
   return (
     <div style={styles.app}>
@@ -71,16 +84,20 @@ function App() {
 
       <div style={styles.card}>
         <div style={styles.cardHeader}>> QUOTE.exe</div>
-        {error && (
-          <div style={styles.error}>Error: {error}</div>
-        )}
-        {quote ? (
+        {loading ? (
+          <p>Loading quote...</p>
+        ) : error ? (
+          <div style={styles.error}>
+            <p>Error loading quote: {error}</p>
+            <p style={styles.errorDetail}>API URL: {process.env.REACT_APP_API_URL}</p>
+          </div>
+        ) : quote ? (
           <div>
             <p style={styles.quoteText}>"{quote.text}"</p>
             <p style={styles.author}>- {quote.author}</p>
           </div>
-        ) : !error && (
-          <p>Loading quote...</p>
+        ) : (
+          <p>No quote available</p>
         )}
       </div>
 
@@ -105,7 +122,11 @@ function App() {
 
       <div style={styles.card}>
         <div style={styles.cardHeader}>> GOALS.dat</div>
-        {goals.length > 0 ? (
+        {loading ? (
+          <p>Loading goals...</p>
+        ) : error ? (
+          <p style={styles.error}>Error loading goals: {error}</p>
+        ) : goals.length > 0 ? (
           goals.map((goal) => (
             <div key={goal.id} style={styles.goalItem}>
               <h3>{goal.title}</h3>
@@ -113,7 +134,7 @@ function App() {
             </div>
           ))
         ) : (
-          <p>No goals found.</p>
+          <p>No goals found</p>
         )}
       </div>
     </div>
@@ -182,6 +203,11 @@ const styles = {
   error: {
     color: '#ff4444',
     marginBottom: '10px',
+  },
+  errorDetail: {
+    fontSize: '12px',
+    color: '#888',
+    marginTop: '5px',
   }
 };
 
