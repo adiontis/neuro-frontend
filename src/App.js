@@ -5,25 +5,58 @@ function App() {
   const [quote, setQuote] = useState(null);
   const [newGoal, setNewGoal] = useState({ title: '', description: '' });
 
+  // Add console.log to check API URL
+  console.log('API URL:', process.env.REACT_APP_API_URL);
+
   useEffect(() => {
-    fetch(process.env.REACT_APP_API_URL + '/api/goals')
-      .then((res) => res.json())
-      .then(setGoals);
-    fetch(process.env.REACT_APP_API_URL + '/api/quotes/random')
-      .then((res) => res.json())
-      .then(setQuote);
+    // Fetch goals
+    console.log('Fetching goals from:', `${process.env.REACT_APP_API_URL}/api/goals`);
+    fetch(`${process.env.REACT_APP_API_URL}/api/goals`)
+      .then((res) => {
+        console.log('Goals response status:', res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log('Goals data:', data);
+        setGoals(data);
+      })
+      .catch(error => {
+        console.error('Error fetching goals:', error);
+      });
+
+    // Fetch quote
+    console.log('Fetching quote from:', `${process.env.REACT_APP_API_URL}/api/quotes/random`);
+    fetch(`${process.env.REACT_APP_API_URL}/api/quotes/random`)
+      .then((res) => {
+        console.log('Quote response status:', res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log('Quote data:', data);
+        setQuote(data);
+      })
+      .catch(error => {
+        console.error('Error fetching quote:', error);
+      });
   }, []);
 
   const addGoal = async (e) => {
     e.preventDefault();
-    const res = await fetch(process.env.REACT_APP_API_URL + '/api/goals', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newGoal),
-    });
-    const goal = await res.json();
-    setGoals([goal, ...goals]);
-    setNewGoal({ title: '', description: '' });
+    console.log('Adding new goal:', newGoal);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/goals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newGoal),
+      });
+      console.log('Add goal response status:', res.status);
+      const goal = await res.json();
+      console.log('New goal response:', goal);
+      setGoals([goal, ...goals]);
+      setNewGoal({ title: '', description: '' });
+    } catch (error) {
+      console.error('Error adding goal:', error);
+    }
   };
 
   return (
@@ -34,11 +67,13 @@ function App() {
 
       <div style={styles.card}>
         <div style={styles.cardHeader}>> QUOTE.exe</div>
-        {quote && (
+        {quote ? (
           <div>
             <p>"{quote.text}"</p>
             <p style={styles.author}>- {quote.author}</p>
           </div>
+        ) : (
+          <p>Loading quote...</p>
         )}
       </div>
 
@@ -57,18 +92,22 @@ function App() {
             value={newGoal.description}
             onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
           />
-          <button style={styles.button}>INITIALIZE GOAL</button>
+          <button style={styles.button} type="submit">INITIALIZE GOAL</button>
         </form>
       </div>
 
       <div style={styles.card}>
         <div style={styles.cardHeader}>> GOALS.dat</div>
-        {goals.map((goal) => (
-          <div key={goal._id} style={styles.goalItem}>
-            <h3>{goal.title}</h3>
-            <p>{goal.description}</p>
-          </div>
-        ))}
+        {goals.length > 0 ? (
+          goals.map((goal) => (
+            <div key={goal.id} style={styles.goalItem}>
+              <h3>{goal.title}</h3>
+              <p>{goal.description}</p>
+            </div>
+          ))
+        ) : (
+          <p>No goals found.</p>
+        )}
       </div>
     </div>
   );
@@ -88,7 +127,7 @@ const styles = {
     marginBottom: '32px',
   },
   h1: {
-    fontSize: '28px',    // This line was unterminated in your original code
+    fontSize: '28px',
     marginBottom: '16px',
     color: '#FFB000'
   },
