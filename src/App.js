@@ -3,24 +3,54 @@ import React, { useState, useEffect } from 'react';
 function App() {
   const [goals, setGoals] = useState([]);
   const [quote, setQuote] = useState(null);
+  const [error, setError] = useState(null);
   const [newGoal, setNewGoal] = useState({ title: '', description: '' });
 
   useEffect(() => {
-    fetch(process.env.REACT_APP_API_URL + '/api/goals')
-      .then((res) => res.json())
-      .then(setGoals)
-      .catch(console.error);
+    // Log the API URL we're trying to reach
+    console.log('API URL:', process.env.REACT_APP_API_URL);
 
-    fetch(process.env.REACT_APP_API_URL + '/api/quotes/random')
-      .then((res) => res.json())
-      .then(setQuote)
-      .catch(console.error);
+    // Fetch quotes with error handling
+    const fetchQuote = async () => {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/quotes/random`);
+        console.log('Quote response status:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Quote data received:', data);
+        setQuote(data);
+      } catch (error) {
+        console.error('Error fetching quote:', error);
+        setError(error.message);
+      }
+    };
+
+    // Fetch goals with error handling
+    const fetchGoals = async () => {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/goals`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setGoals(data);
+      } catch (error) {
+        console.error('Error fetching goals:', error);
+      }
+    };
+
+    fetchQuote();
+    fetchGoals();
   }, []);
 
   const addGoal = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(process.env.REACT_APP_API_URL + '/api/goals', {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/goals`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newGoal),
@@ -41,11 +71,16 @@ function App() {
 
       <div style={styles.card}>
         <div style={styles.cardHeader}>> QUOTE.exe</div>
-        {quote && (
+        {error && (
+          <div style={styles.error}>Error: {error}</div>
+        )}
+        {quote ? (
           <div>
-            <p>"{quote.text}"</p>
+            <p style={styles.quoteText}>"{quote.text}"</p>
             <p style={styles.author}>- {quote.author}</p>
           </div>
+        ) : !error && (
+          <p>Loading quote...</p>
         )}
       </div>
 
@@ -70,12 +105,16 @@ function App() {
 
       <div style={styles.card}>
         <div style={styles.cardHeader}>> GOALS.dat</div>
-        {goals.map((goal) => (
-          <div key={goal.id} style={styles.goalItem}>
-            <h3>{goal.title}</h3>
-            <p>{goal.description}</p>
-          </div>
-        ))}
+        {goals.length > 0 ? (
+          goals.map((goal) => (
+            <div key={goal.id} style={styles.goalItem}>
+              <h3>{goal.title}</h3>
+              <p>{goal.description}</p>
+            </div>
+          ))
+        ) : (
+          <p>No goals found.</p>
+        )}
       </div>
     </div>
   );
@@ -135,6 +174,14 @@ const styles = {
   author: {
     color: '#888',
     fontStyle: 'italic',
+  },
+  quoteText: {
+    fontSize: '18px',
+    marginBottom: '8px',
+  },
+  error: {
+    color: '#ff4444',
+    marginBottom: '10px',
   }
 };
 
