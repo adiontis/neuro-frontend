@@ -1,121 +1,141 @@
-// Import necessary React Native components
 import React, { useState, useEffect } from 'react';
-// These are the basic building blocks for mobile UI
-import { 
-  View,        // Like a <div> in web
-  Text,        // Like a <p> or <span> in web
-  TextInput,   // Like an <input> in web
-  TouchableOpacity,  // Like a <button> in web
-  StyleSheet   // For styling (similar to CSS)
-} from 'react-native';
 
 function App() {
-  // State management for your app data
-  const [goals, setGoals] = useState([]); // Stores all goals
-  const [quote, setQuote] = useState(null); // Stores the current quote
-  const [newGoal, setNewGoal] = useState({ title: '', description: '' }); // For new goal input
+  const [goals, setGoals] = useState([]);
+  const [quote, setQuote] = useState(null);
+  const [newGoal, setNewGoal] = useState({ title: '', description: '' });
 
-  // Main app layout
+  useEffect(() => {
+    fetch(process.env.REACT_APP_API_URL + '/api/goals')
+      .then((res) => res.json())
+      .then(setGoals)
+      .catch(console.error);
+
+    fetch(process.env.REACT_APP_API_URL + '/api/quotes/random')
+      .then((res) => res.json())
+      .then(setQuote)
+      .catch(console.error);
+  }, []);
+
+  const addGoal = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(process.env.REACT_APP_API_URL + '/api/goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newGoal),
+      });
+      const goal = await res.json();
+      setGoals([goal, ...goals]);
+      setNewGoal({ title: '', description: '' });
+    } catch (error) {
+      console.error('Error adding goal:', error);
+    }
+  };
+
   return (
-    // View is like a container div
-    <View style={styles.app}>
-      {/* Header section */}
-      <View style={styles.header}>
-        <Text style={styles.h1}>NEURO::v1.0</Text>
-      </View>
+    <div style={styles.app}>
+      <header style={styles.header}>
+        <h1 style={styles.h1}>NEURO::v1.0</h1>
+      </header>
 
-      {/* Quote Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardHeader}>> QUOTE.exe</Text>
+      <div style={styles.card}>
+        <div style={styles.cardHeader}>> QUOTE.exe</div>
         {quote && (
-          <View>
-            <Text>"{quote.text}"</Text>
-            <Text style={styles.author}>- {quote.author}</Text>
-          </View>
+          <div>
+            <p>"{quote.text}"</p>
+            <p style={styles.author}>- {quote.author}</p>
+          </div>
         )}
-      </View>
+      </div>
 
-      {/* New Goal Input Form */}
-      <View style={styles.card}>
-        <Text style={styles.cardHeader}>> NEW_GOAL.exe</Text>
-        {/* Title Input */}
-        <TextInput
-          style={styles.input}
-          placeholder="Goal Title"
-          placeholderTextColor="#666"
-          value={newGoal.title}
-          onChangeText={(text) => setNewGoal({ ...newGoal, title: text })}
-        />
-        {/* Description Input */}
-        <TextInput
-          style={[styles.input, { height: 80 }]}
-          placeholder="Description"
-          placeholderTextColor="#666"
-          multiline
-          value={newGoal.description}
-          onChangeText={(text) => setNewGoal({ ...newGoal, description: text })}
-        />
-        {/* Submit Button */}
-        <TouchableOpacity style={styles.button} onPress={addGoal}>
-          <Text style={styles.buttonText}>INITIALIZE GOAL</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      <div style={styles.card}>
+        <div style={styles.cardHeader}>> NEW_GOAL.exe</div>
+        <form onSubmit={addGoal}>
+          <input
+            style={styles.input}
+            placeholder="Goal Title"
+            value={newGoal.title}
+            onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
+          />
+          <textarea
+            style={{ ...styles.input, height: '80px' }}
+            placeholder="Description"
+            value={newGoal.description}
+            onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
+          />
+          <button style={styles.button} type="submit">INITIALIZE GOAL</button>
+        </form>
+      </div>
+
+      <div style={styles.card}>
+        <div style={styles.cardHeader}>> GOALS.dat</div>
+        {goals.map((goal) => (
+          <div key={goal.id} style={styles.goalItem}>
+            <h3>{goal.title}</h3>
+            <p>{goal.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
-// Styles for the app (similar to CSS but using React Native's StyleSheet)
-const styles = StyleSheet.create({
-  // Main container style
+const styles = {
   app: {
-    flex: 1,               // Takes up full screen
-    padding: 20,           // Padding around edges
-    backgroundColor: '#0A0A0A',  // Dark background
+    maxWidth: '800px',
+    margin: '0 auto',
+    padding: '20px',
+    fontFamily: '"Share Tech Mono", monospace',
+    color: '#FFB000',
+    backgroundColor: '#0A0A0A',
   },
-  // Header styles
   header: {
-    alignItems: 'center',  // Center content horizontally
-    marginBottom: 32,      // Space below header
+    textAlign: 'center',
+    marginBottom: '32px',
   },
-  // Main title style
   h1: {
-    fontSize: 28,
-    color: '#FFB000',      // Gold color
-    fontWeight: 'bold',
+    fontSize: '28px',
+    marginBottom: '16px',
+    color: '#FFB000'
   },
-  // Card container style
   card: {
-    backgroundColor: '#1A1A1A',  // Dark grey
-    borderRadius: 4,             // Rounded corners
-    padding: 20,
-    marginBottom: 20,
+    backgroundColor: '#1A1A1A',
+    borderRadius: '4px',
+    padding: '20px',
+    marginBottom: '20px',
   },
-  // Card header style
   cardHeader: {
-    color: '#00FF00',      // Green color
-    marginBottom: 16,
-    fontSize: 18,
+    color: '#00FF00',
+    marginBottom: '16px',
+    fontSize: '18px',
   },
-  // Input field style
   input: {
     width: '100%',
-    padding: 8,
-    marginBottom: 12,
+    padding: '8px',
+    marginBottom: '12px',
     backgroundColor: '#2A2A2A',
-    borderWidth: 1,
-    borderColor: '#444',
-    color: '#FFB000',      // Gold text
+    border: '1px solid #444',
+    color: '#FFB000',
+    fontFamily: '"Share Tech Mono", monospace',
   },
-  // Button style
   button: {
     backgroundColor: '#444',
-    padding: 10,
-    alignItems: 'center',  // Center button text
+    color: '#FFB000',
+    border: 'none',
+    padding: '10px 20px',
+    cursor: 'pointer',
+    fontFamily: '"Share Tech Mono", monospace',
   },
-  // Button text style
-  buttonText: {
-    color: '#FFB000',      // Gold text
+  goalItem: {
+    borderBottom: '1px solid #444',
+    paddingBottom: '16px',
+    marginBottom: '16px',
   },
-});
+  author: {
+    color: '#888',
+    fontStyle: 'italic',
+  }
+};
 
 export default App;
